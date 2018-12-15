@@ -13,4 +13,5 @@ struct treeVertex
     {
         this->sequence = sequence;
     }
+    treeVertex() {}
 };

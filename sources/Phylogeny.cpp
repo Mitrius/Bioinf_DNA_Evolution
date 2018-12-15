@@ -1,5 +1,9 @@
 #include <chrono>
 #include <queue>
+#include <fstream>
+#include <iostream>
+#include <map>
+
 #include "../headers/Phylogeny.h"
 
 Phylogeny::Phylogeny(double alpha, double beta)
@@ -14,7 +18,7 @@ std::vector<treeVertex> Phylogeny::phylogenesy(std::vector<protein> &initialSequ
     std::exponential_distribution<double> distribution(timeGeneratorMean);
 
     std::vector<treeVertex> tree;
-    std::queue<treeVertex> vertexQueue;
+    std::queue<int> vertexQueue;
 
     treeVertex initialVertex(initialSequence);
 
@@ -22,34 +26,34 @@ std::vector<treeVertex> Phylogeny::phylogenesy(std::vector<protein> &initialSequ
     initialVertex.root = -1;
 
     tree.push_back(initialVertex);
-    vertexQueue.push(initialVertex);
+    vertexQueue.push(initialVertex.id);
 
     for (int epoch = 0; epoch < epochs; epoch++)
     {
         int vertexAmount = vertexQueue.size();
         for (int i = 0; i < vertexAmount; i++)
         {
-            treeVertex vertex = vertexQueue.front();
+            int vertex = vertexQueue.front();
             vertexQueue.pop();
-            double prob = (distribution(generator) - distribution.min()) / distribution.max() - 1; // Squash value in 0-1 interval
+            double prob = (distribution(generator) - distribution.min()) / distribution.max() - 1; // Squash value into 0-1 interval
             if (prob < speciationProb)
             {
-                std::vector<protein> nextSpecie = mutate(vertex.sequence, generator);
-                treeVertex nextVertex(vertex);
+                std::vector<protein> nextSpecie = mutate(tree[vertex].sequence, generator);
+                treeVertex nextVertex(tree[vertex]);
 
-                nextVertex.root = vertex.id;
+                nextVertex.root = tree[vertex].id;
                 nextVertex.sequence = nextSpecie;
-                vertex.right = nextVertex.id = tree.size();
+                tree[vertex].right = nextVertex.id = tree.size();
 
                 tree.push_back(nextVertex);
-                vertexQueue.push(nextVertex);
+                vertexQueue.push(nextVertex.id);
 
-                treeVertex dummyVertex(vertex.sequence);
-                vertex.left = dummyVertex.id = tree.size();
-                dummyVertex.root = vertex.id;
+                treeVertex dummyVertex(tree[vertex].sequence);
+                tree[vertex].left = dummyVertex.id = tree.size();
+                dummyVertex.root = tree[vertex].root;
 
                 tree.push_back(dummyVertex);
-                vertexQueue.push(dummyVertex);
+                vertexQueue.push(dummyVertex.id);
             }
             else
             {
@@ -83,4 +87,65 @@ std::vector<protein> Phylogeny::mutate(const std::vector<protein> &initialSequen
     }
 
     return mutatedSequence;
+}
+
+void Phylogeny::writeBranchesIntoFile(std::string filename, std::vector<treeVertex> &tree)
+{
+    std::ofstream targetFile;
+    std::vector<treeVertex> leaves;
+
+    for (treeVertex &vertex : tree)
+    {
+        if (vertex.right == 0 && vertex.left == 0)
+            leaves.push_back(vertex);
+    }
+
+    targetFile.open(filename, std::ios::out);
+    
+    if (targetFile.is_open())
+    {
+
+        for (treeVertex &vertex : leaves)
+        {
+            targetFile << this->getReversedOrderOfAncestors(tree, vertex) << "\n";
+        }
+    }
+}
+
+std::string Phylogeny::getReversedOrderOfAncestors(std::vector<treeVertex> &tree, treeVertex &vertex)
+{
+    std::vector<std::string> sequences;
+    std::map<protein, std::string> codings;
+
+    codings[A] = "A";
+    codings[T] = "T";
+    codings[C] = "C";
+    codings[G] = "G";
+
+    int nextVertex = vertex.id;
+    std::vector<protein> sequence;
+    std::vector<std::string> stringVector;
+
+    while (nextVertex >= 0)
+    {
+        sequence = tree[nextVertex].sequence;
+
+        std::string sequenceStringified;
+        for (protein &prot : sequence)
+        {
+            sequenceStringified += codings[prot];
+        }
+        stringVector.push_back(sequenceStringified);
+
+        nextVertex = tree[nextVertex].root;
+    }
+
+    std::string output;
+
+    for (int i = stringVector.size() - 1; i > 0; i--)
+    {
+        output += stringVector[i] + ",";
+    }
+    output += stringVector[0];
+    return output;
 }
