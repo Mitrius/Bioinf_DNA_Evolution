@@ -1,4 +1,4 @@
-enum protein
+enum base
 {
     A = 0,
     C = 1,
