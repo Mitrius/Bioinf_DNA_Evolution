@@ -15,9 +15,15 @@ int main(int argc, char const *argv[])
     const int epochs = std::stoi(argv[5]);
 
     const std::string sequence = std::string(argv[6]);
-    ProteinSequence initialSequence(sequence);
 
-    std::vector<treeVertex> outputTree = phylogeny.phylogenesy(initialSequence, epochs, generatorMean, speciationProbability);
+    ProteinSequence initialSequence(sequence);
+    treeVertex initialVertex(initialSequence);
+    initialVertex.root = -1;
+
+    std::vector<treeVertex> initialTree;
+    initialTree.push_back(initialVertex);
+
+    std::vector<treeVertex> outputTree = phylogeny.phylogenesy(initialTree, epochs, generatorMean, speciationProbability);
 
     phylogeny.printTree(outputTree);
 
@@ -25,6 +31,8 @@ int main(int argc, char const *argv[])
 
     std::vector<treeVertex> loadedTree = phylogeny.reversePhylogeny("tree.csv");
 
+    phylogeny.phylogenesy(loadedTree, 1, generatorMean, speciationProbability);
+    
     phylogeny.printTree(loadedTree);
     return 0;
 }

@@ -8,10 +8,10 @@ class Phylogeny
 {
 public:
   Phylogeny(double alpha, double beta);
-  std::vector<treeVertex> phylogenesy(ProteinSequence &initialSequence, int epochs, double timeGeneratorMean, double speciationProb);
+  std::vector<treeVertex> phylogenesy(std::vector<treeVertex> &tree, int epochs, double timeGeneratorMean, double speciationProb);
   void writeBranchesIntoFile(std::string filename, std::vector<treeVertex> &tree);
   void printTree(std::vector<treeVertex> &tree);
-  std::vector<treeVertex> reversePhylogeny(const std::string& filename);
+  std::vector<treeVertex> reversePhylogeny(const std::string &filename);
 
 private:
   double transversionProbability;

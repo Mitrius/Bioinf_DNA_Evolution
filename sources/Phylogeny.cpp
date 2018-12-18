@@ -12,22 +12,19 @@ Phylogeny::Phylogeny(double alpha, double beta)
     transversionProbability = beta;
     transpositionProbability = alpha;
 }
-std::vector<treeVertex> Phylogeny::phylogenesy(ProteinSequence &initialSequence, int epochs, double timeGeneratorMean, double speciationProb)
+std::vector<treeVertex> Phylogeny::phylogenesy(std::vector<treeVertex> &tree, int epochs, double timeGeneratorMean, double speciationProb)
 {
     int seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::default_random_engine generator(seed);
     std::exponential_distribution<double> distribution(timeGeneratorMean);
 
-    std::vector<treeVertex> tree;
     std::queue<int> vertexQueue;
 
-    treeVertex initialVertex(initialSequence);
-
-    initialVertex.id = 0;
-    initialVertex.root = -1;
-
-    tree.push_back(initialVertex);
-    vertexQueue.push(initialVertex.id);
+    for (treeVertex &vertex : tree)
+    {
+        if (vertex.left == 0 && vertex.right == 0) //only push leaves
+            vertexQueue.push(vertex.id);
+    }
 
     for (int epoch = 0; epoch < epochs; epoch++)
     {
@@ -179,7 +176,7 @@ std::vector<treeVertex> Phylogeny::reversePhylogeny(const std::string &filename)
             boost::split(lineSplitted, line, boost::is_any_of(","));
             if (lineSplitted.back() != "")
             {
-                int length = std::stoi(lineSplitted.back()) +1;
+                int length = std::stoi(lineSplitted.back()) + 1;
                 if (length > maxLength)
                     maxLength = length;
             }
