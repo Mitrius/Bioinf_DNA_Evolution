@@ -11,6 +11,7 @@ public:
   std::string baseVec2String();
   base &operator[](int index);
   void pushBack(const base &newBase);
+  void popBack();
   typename std::vector<base>::iterator begin()
   {
     return inside.begin();

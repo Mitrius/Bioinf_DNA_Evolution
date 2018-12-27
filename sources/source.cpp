@@ -7,14 +7,11 @@ int main(int argc, char const *argv[])
 {
     const double alpha = std::stod(argv[1]);
     const double beta = std::stod(argv[2]);
-
-    Phylogeny phylogeny(alpha, beta);
-
     const double generatorMean = std::stod(argv[3]);
-    const double speciationProbability = std::stod(argv[4]);
-    const int epochs = std::stoi(argv[5]);
+    const int epochs = std::stoi(argv[4]);
+    const std::string sequence = std::string(argv[5]);
 
-    const std::string sequence = std::string(argv[6]);
+    Phylogeny phylogeny(alpha, beta);   
 
     ProteinSequence initialSequence(sequence);
     treeVertex initialVertex(initialSequence);
@@ -23,7 +20,7 @@ int main(int argc, char const *argv[])
     std::vector<treeVertex> initialTree;
     initialTree.push_back(initialVertex);
 
-    std::vector<treeVertex> outputTree = phylogeny.phylogenesy(initialTree, epochs, generatorMean, speciationProbability);
+    std::vector<treeVertex> outputTree = phylogeny.phylogenesy(initialTree, epochs,generatorMean);
 
     phylogeny.printTree(outputTree);
 
@@ -31,7 +28,7 @@ int main(int argc, char const *argv[])
 
     std::vector<treeVertex> loadedTree = phylogeny.reversePhylogeny("tree.csv");
 
-    phylogeny.phylogenesy(loadedTree, 1, generatorMean, speciationProbability);
+    phylogeny.phylogenesy(loadedTree, 1, generatorMean);
     
     phylogeny.printTree(loadedTree);
     return 0;

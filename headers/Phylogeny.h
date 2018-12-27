@@ -8,17 +8,17 @@ class Phylogeny
 {
 public:
   Phylogeny(double alpha, double beta);
-  std::vector<treeVertex> phylogenesy(std::vector<treeVertex> &tree, int epochs, double timeGeneratorMean, double speciationProb);
+  std::vector<treeVertex> phylogenesy(std::vector<treeVertex> &tree, int epochs, double timeGeneratorMean);
   void writeBranchesIntoFile(std::string filename, std::vector<treeVertex> &tree);
   void printTree(std::vector<treeVertex> &tree);
   std::vector<treeVertex> reversePhylogeny(const std::string &filename);
 
 private:
-  double transversionProbability;
-  double transpositionProbability;
-  std::default_random_engine generator;
+  double alpha;
+  double beta;
 
-  base singleMutate(const base &initialProtein, double randValue);
-  ProteinSequence mutate(ProteinSequence &initialSequence, std::default_random_engine &generator);
+  std::default_random_engine generator;
+  std::vector<std::vector<double>> generateProbMatrix(double time);
+  ProteinSequence mutate(ProteinSequence &initialSequence, double &time,std::default_random_engine& generator);
   std::string getReversedOrderOfAncestors(std::vector<treeVertex> &tree, treeVertex &vertex);
 };

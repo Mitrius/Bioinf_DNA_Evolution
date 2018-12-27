@@ -9,15 +9,29 @@
 
 Phylogeny::Phylogeny(double alpha, double beta)
 {
-    transversionProbability = beta;
-    transpositionProbability = alpha;
+    this->alpha = alpha;
+    this->beta = beta;
 }
-std::vector<treeVertex> Phylogeny::phylogenesy(std::vector<treeVertex> &tree, int epochs, double timeGeneratorMean, double speciationProb)
+std::vector<std::vector<double>> Phylogeny::generateProbMatrix(double time)
+{
+    double s = (1 - std::exp(-4 * beta * time)) / 4;
+    double u = (1 + std::exp(-4 * beta * time) - 2 * std::exp(-2 * (alpha + beta) * time)) / 4;
+    double r = 1 - 2 * s - u;
+
+    std::vector<std::vector<double>> retArray = {
+        {r, s, u, s},
+        {s, r, s, u},
+        {u, s, r, s},
+        {s, u, s, r}};
+
+    return retArray;
+}
+std::vector<treeVertex> Phylogeny::phylogenesy(std::vector<treeVertex> &tree, int epochs, double timeGeneratorMean)
 {
     int seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::default_random_engine generator(seed);
     std::exponential_distribution<double> distribution(timeGeneratorMean);
-
+    int actualEpoch = 0;
     std::queue<int> vertexQueue;
 
     for (treeVertex &vertex : tree)
@@ -25,67 +39,71 @@ std::vector<treeVertex> Phylogeny::phylogenesy(std::vector<treeVertex> &tree, in
         if (vertex.left == 0 && vertex.right == 0) //only push leaves
             vertexQueue.push(vertex.id);
     }
-
-    for (int epoch = 0; epoch < epochs; epoch++)
+    while (!vertexQueue.empty())
     {
-        int vertexAmount = vertexQueue.size();
-        for (int i = 0; i < vertexAmount; i++)
+        int vertex = vertexQueue.front();
+        vertexQueue.pop();
+
+        double time = tree[vertex].timeDepth + distribution(generator);
+
+        ProteinSequence nextSpecie = mutate(tree[vertex].sequence, time, generator);
+
+        if (nextSpecie.baseVec2String() == tree[vertex].sequence.baseVec2String())
+            continue;
+        treeVertex dummyVertex(tree[vertex].sequence);
+        tree[vertex].left = dummyVertex.id = tree.size();
+
+        dummyVertex.root = tree[vertex].id;
+        dummyVertex.depth = tree[vertex].depth + 1;
+        dummyVertex.timeDepth = time;
+
+        tree.push_back(dummyVertex);
+
+        treeVertex nextVertex(nextSpecie);
+
+        nextVertex.root = tree[vertex].id;
+        nextVertex.sequence = nextSpecie;
+        nextVertex.depth = tree[vertex].depth + 1;
+        nextVertex.timeDepth = time;
+
+        tree[vertex].right = nextVertex.id = tree.size();
+
+        tree.push_back(nextVertex);
+        actualEpoch++;
+        if (actualEpoch < epochs)
         {
-            int vertex = vertexQueue.front();
-            vertexQueue.pop();
-            double prob = std::fmod(distribution(generator), 1.0); // Squash value into 0-1 interval
-            if (prob <= speciationProb)
-            {
-                ProteinSequence nextSpecie = mutate(tree[vertex].sequence, generator);
-                if (nextSpecie.baseVec2String() == tree[vertex].sequence.baseVec2String())
-                    continue;
-                treeVertex dummyVertex(tree[vertex].sequence);
-                tree[vertex].left = dummyVertex.id = tree.size();
-                dummyVertex.root = tree[vertex].id;
-                dummyVertex.depth = tree[vertex].depth + 1;
-
-                tree.push_back(dummyVertex);
-                vertexQueue.push(dummyVertex.id);
-
-                treeVertex nextVertex(nextSpecie);
-                nextVertex.root = tree[vertex].id;
-                nextVertex.sequence = nextSpecie;
-                nextVertex.depth = tree[vertex].depth + 1;
-
-                tree[vertex].right = nextVertex.id = tree.size();
-
-                tree.push_back(nextVertex);
-                vertexQueue.push(nextVertex.id);
-            }
-            else
-            {
-                vertexQueue.push(vertex);
-            }
+            vertexQueue.push(dummyVertex.id);
+            vertexQueue.push(nextVertex.id);
         }
     }
     return tree;
 }
-base Phylogeny::singleMutate(const base &initialProtein, double randValue)
-{
-    const int protId = static_cast<int>(initialProtein);
-
-    if (randValue <= transversionProbability) // Transversion occurs
-        return static_cast<base>((protId + 1) % 4);
-    else if (randValue <= transpositionProbability) // Transposition occurs
-        return static_cast<base>((protId + 2) % 4);
-    else //nothing changes
-        return initialProtein;
-}
-
-ProteinSequence Phylogeny::mutate(ProteinSequence &initialSequence, std::default_random_engine &generator)
+//TODO: mutatis mutandis
+ProteinSequence Phylogeny::mutate(ProteinSequence &initialSequence, double &time, std::default_random_engine &generator)
 {
     ProteinSequence mutatedSequence;
+
+    std::vector<std::vector<double>> probMatrix = generateProbMatrix(time);
     double val;
 
     for (base &prot : initialSequence)
     {
-        val = static_cast<double>(generator()) / generator.max();
-        mutatedSequence.pushBack(singleMutate(prot, val));
+        mutatedSequence.pushBack(prot);
+
+        int protCode = static_cast<int>(prot);
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (i == protCode)
+                continue;
+            double prob = generator() / generator.max();
+            if (prob < probMatrix[protCode][i])
+            {
+                mutatedSequence.popBack();
+                mutatedSequence.pushBack(static_cast<base>(i));
+                break;
+            }
+        }
     }
 
     return mutatedSequence;
@@ -149,7 +167,7 @@ void Phylogeny::printTree(std::vector<treeVertex> &tree)
         {
             if (vertex.depth == depth)
             {
-                std::cout << vertex.sequence.baseVec2String() << " (d=" << vertex.depth << "|id=" << vertex.id << "|r=" << vertex.root << ")   ";
+                std::cout << vertex.sequence.baseVec2String() << " (d=" << vertex.time << "|id=" << vertex.id << "|r=" << vertex.root << ")   ";
             }
         }
         std::cout << '\n'

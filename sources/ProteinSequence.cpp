@@ -46,3 +46,7 @@ void ProteinSequence::pushBack(const base &newBase)
 {
     inside.push_back(newBase);
 }
+void ProteinSequence::popBack()
+{
+    inside.pop_back();
+}
