@@ -1,6 +1,6 @@
-#include <random>
 #include <vector>
 #include <map>
+#include <boost/random.hpp>
 
 #include "treeVertex.h"
 
@@ -17,8 +17,7 @@ private:
   double alpha;
   double beta;
 
-  std::default_random_engine generator;
   std::vector<std::vector<double>> generateProbMatrix(double time);
-  ProteinSequence mutate(ProteinSequence &initialSequence, double &time,std::default_random_engine& generator);
+  ProteinSequence mutate(ProteinSequence &initialSequence, double &time,boost::mt19937& generator);
   std::string getReversedOrderOfAncestors(std::vector<treeVertex> &tree, treeVertex &vertex);
 };

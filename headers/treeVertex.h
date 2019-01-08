@@ -8,7 +8,7 @@ struct treeVertex
     int id = 0;
     int root = 0;
     int depth = 0;
-    int timeDepth = 0;
+    double timeDepth = 0;
 
     treeVertex(ProteinSequence &sequence)
     {

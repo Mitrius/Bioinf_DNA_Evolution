@@ -1,11 +1,12 @@
-#include <chrono>
 #include <queue>
 #include <fstream>
 #include <iostream>
-#include <algorithm>
-#include <cmath>
+
 #include <boost/algorithm/string.hpp>
+
 #include "../headers/Phylogeny.h"
+
+typedef boost::variate_generator<boost::mt19937 &, boost::exponential_distribution<>> exp_distribution;
 
 Phylogeny::Phylogeny(double alpha, double beta)
 {
@@ -28,9 +29,9 @@ std::vector<std::vector<double>> Phylogeny::generateProbMatrix(double time)
 }
 std::vector<treeVertex> Phylogeny::phylogenesy(std::vector<treeVertex> &tree, int epochs, double timeGeneratorMean)
 {
-    int seed = std::chrono::system_clock::now().time_since_epoch().count();
-    std::default_random_engine generator(seed);
-    std::exponential_distribution<double> distribution(timeGeneratorMean);
+    boost::mt19937 generator(5u);
+    exp_distribution distribution(generator, boost::exponential_distribution<>(timeGeneratorMean));
+
     int actualEpoch = 0;
     std::queue<int> vertexQueue;
 
@@ -44,7 +45,7 @@ std::vector<treeVertex> Phylogeny::phylogenesy(std::vector<treeVertex> &tree, in
         int vertex = vertexQueue.front();
         vertexQueue.pop();
 
-        double time = tree[vertex].timeDepth + distribution(generator);
+        double time = tree[vertex].timeDepth + distribution();
 
         ProteinSequence nextSpecie = mutate(tree[vertex].sequence, time, generator);
 
@@ -79,31 +80,18 @@ std::vector<treeVertex> Phylogeny::phylogenesy(std::vector<treeVertex> &tree, in
     return tree;
 }
 //TODO: mutatis mutandis
-ProteinSequence Phylogeny::mutate(ProteinSequence &initialSequence, double &time, std::default_random_engine &generator)
+ProteinSequence Phylogeny::mutate(ProteinSequence &initialSequence, double &time, boost::mt19937 &generator)
 {
     ProteinSequence mutatedSequence;
 
     std::vector<std::vector<double>> probMatrix = generateProbMatrix(time);
-    double val;
 
     for (base &prot : initialSequence)
     {
-        mutatedSequence.pushBack(prot);
-
         int protCode = static_cast<int>(prot);
-
-        for (int i = 0; i < 4; i++)
-        {
-            if (i == protCode)
-                continue;
-            double prob = generator() / generator.max();
-            if (prob < probMatrix[protCode][i])
-            {
-                mutatedSequence.popBack();
-                mutatedSequence.pushBack(static_cast<base>(i));
-                break;
-            }
-        }
+        boost::random::discrete_distribution<int, double> mutationprobability(probMatrix[protCode]);
+        int nextProtein = mutationprobability(generator);
+        mutatedSequence.pushBack(static_cast<base>(nextProtein));
     }
 
     return mutatedSequence;
@@ -167,7 +155,7 @@ void Phylogeny::printTree(std::vector<treeVertex> &tree)
         {
             if (vertex.depth == depth)
             {
-                std::cout << vertex.sequence.baseVec2String() << " (d=" << vertex.time << "|id=" << vertex.id << "|r=" << vertex.root << ")   ";
+                std::cout << vertex.sequence.baseVec2String() << " (d=" << vertex.timeDepth << "|id=" << vertex.id << "|r=" << vertex.root << ")   ";
             }
         }
         std::cout << '\n'
